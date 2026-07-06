@@ -156,22 +156,22 @@ export function useEditorActions() {
     const { libraryActivePath, multiSelectedPaths } = useLibraryStore.getState();
     let sourceAdjustments: any = null;
 
-    if (selectedImage) {
+    const pathToCopyFrom =
+      pathOverride || (selectedImage ? selectedImage.path : libraryActivePath || multiSelectedPaths[0]);
+
+    if (selectedImage && pathToCopyFrom === selectedImage.path) {
       sourceAdjustments = adjustments;
-    } else {
-      const pathToCopyFrom = pathOverride || libraryActivePath || multiSelectedPaths[0];
-      if (pathToCopyFrom) {
-        try {
-          const meta: any = await invoke(Invokes.LoadMetadata, { path: pathToCopyFrom });
-          if (meta?.adjustments && !meta.adjustments.is_null) {
-            sourceAdjustments = normalizeLoadedAdjustments(meta.adjustments);
-          } else {
-            sourceAdjustments = INITIAL_ADJUSTMENTS;
-          }
-        } catch (err) {
-          toast.error(`Failed to load metadata for copying: ${err}`);
-          return;
+    } else if (pathToCopyFrom) {
+      try {
+        const meta: any = await invoke(Invokes.LoadMetadata, { path: pathToCopyFrom });
+        if (meta?.adjustments && !meta.adjustments.is_null) {
+          sourceAdjustments = normalizeLoadedAdjustments(meta.adjustments);
+        } else {
+          sourceAdjustments = INITIAL_ADJUSTMENTS;
         }
+      } catch (err) {
+        toast.error(`Failed to load metadata for copying: ${err}`);
+        return;
       }
     }
 
