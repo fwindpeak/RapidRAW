@@ -649,41 +649,65 @@ pub fn find_best_lens_match(
     let clean_model = model.trim().trim_matches('"').to_string();
     let matcher = fuzzy_matcher::skim::SkimMatcherV2::default().ignore_case();
 
+    let known_lens_makers = [
+        "sigma", "tamron", "samyang", "tokina", "zeiss", "voigtlander", "laowa", "viltrox",
+        "ttartisan", "7artisans", "yongnuo", "rokinon", "canon", "nikon", "sony", "fujifilm",
+        "panasonic", "olympus", "pentax", "leica",
+    ];
+
+    // Infer real lens maker if present in model name
+    let mut inferred_maker = clean_maker.clone();
+    let model_lower = clean_model.to_lowercase();
+    for km in known_lens_makers {
+        if model_lower.contains(km) {
+            inferred_maker = km.to_string();
+            break;
+        }
+    }
+
+    let score_lens = |lens: &Lens| -> i64 {
+        let maker = lens.get_maker();
+        let mut max_score = 0i64;
+
+        for m in &lens.model {
+            let name = &m.value;
+            let stripped_name = strip_maker_prefix(name, &maker);
+
+            for candidate in [name.as_str(), stripped_name.as_str()] {
+                if candidate.is_empty() {
+                    continue;
+                }
+                if let Some(base_score) = matcher.fuzzy_match(candidate, &clean_model) {
+                    let mut score = base_score;
+                    if candidate.eq_ignore_ascii_case(&clean_model) {
+                        score += 2000;
+                    } else if candidate.to_lowercase().contains(&clean_model.to_lowercase())
+                        || clean_model.to_lowercase().contains(&candidate.to_lowercase())
+                    {
+                        score += 500;
+                    }
+                    let len_penalty = (candidate.len() as i64 - clean_model.len() as i64).abs();
+                    let adjusted_score = score - len_penalty * 2;
+                    if adjusted_score > max_score {
+                        max_score = adjusted_score;
+                    }
+                }
+            }
+        }
+        max_score
+    };
+
     let lenses_from_maker: Vec<&Lens> = db
         .lenses
         .iter()
-        .filter(|lens| lens.get_maker().eq_ignore_ascii_case(&clean_maker))
+        .filter(|lens| lens.get_maker().eq_ignore_ascii_case(&inferred_maker))
         .collect();
 
     if !lenses_from_maker.is_empty() {
         let best_match = lenses_from_maker
             .iter()
-            .filter_map(|lens| {
-                let english_name = lens.get_full_model_name();
-                let canonical_name = lens.get_canonical_model_name();
-
-                let score_english = matcher
-                    .fuzzy_match(&english_name, &clean_model)
-                    .unwrap_or(0);
-                let score_canonical = matcher
-                    .fuzzy_match(&canonical_name, &clean_model)
-                    .unwrap_or(0);
-                let score = score_english.max(score_canonical);
-
-                if score > 0 {
-                    let best_name = if score_canonical > score_english {
-                        &canonical_name
-                    } else {
-                        &english_name
-                    };
-                    let length_penalty =
-                        (best_name.len() as i64 - clean_model.len() as i64).max(0) / 2;
-                    let adjusted_score = score - length_penalty;
-                    Some((adjusted_score, *lens))
-                } else {
-                    None
-                }
-            })
+            .map(|lens| (score_lens(lens), *lens))
+            .filter(|(score, _)| *score > 0)
             .max_by_key(|(score, _)| *score);
 
         if let Some((_, best_lens)) = best_match {
@@ -697,21 +721,9 @@ pub fn find_best_lens_match(
     let best_match_fallback = db
         .lenses
         .iter()
-        .filter_map(|lens| {
-            let english_name = lens.get_full_model_name();
-            let canonical_name = lens.get_canonical_model_name();
-
-            let score_english = matcher
-                .fuzzy_match(&english_name, &clean_model)
-                .unwrap_or(0);
-            let score_canonical = matcher
-                .fuzzy_match(&canonical_name, &clean_model)
-                .unwrap_or(0);
-            let score = score_english.max(score_canonical);
-
-            if score > 0 { Some((score, lens)) } else { None }
-        })
-        .max_by_key(|(score, _): &(i64, _)| *score);
+        .map(|lens| (score_lens(lens), lens))
+        .filter(|(score, _)| *score > 0)
+        .max_by_key(|(score, _)| *score);
 
     if let Some((_, best_lens)) = best_match_fallback {
         let lens_maker = best_lens.get_maker();
@@ -781,5 +793,48 @@ pub fn resolve_lens_params(
         lens.get_distortion_params(focal_length, aperture, distance)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_best_lens_match() {
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<lensdatabase version="1">
+    <camera>
+        <maker>SONY</maker>
+        <model>SONY</model>
+        <mount>Sony E</mount>
+        <cropfactor>1.0</cropfactor>
+    </camera>
+    <lens>
+        <maker>Sigma</maker>
+        <model>Sigma 20-200mm F3.5-6.3 DG C025</model>
+        <model>20-200mm F3.5-6.3 DG C025</model>
+        <model>Sigma 20-200mm F3.5-6.3 DG | Contemporary 025</model>
+        <model>20-200mm F3.5-6.3 DG | Contemporary 025</model>
+        <mount>Sony E</mount>
+        <cropfactor>1.0</cropfactor>
+    </lens>
+</lensdatabase>"#;
+
+        let db: LensDatabase = quick_xml::de::from_str(xml).unwrap();
+
+        // Case 1: EXIF maker is SONY, model is 20-200mm F3.5-6.3 DG C025
+        let res1 = find_best_lens_match(&db, "SONY", "20-200mm F3.5-6.3 DG C025");
+        assert!(res1.is_some());
+        let (maker1, model1) = res1.unwrap();
+        assert_eq!(maker1, "Sigma");
+        assert_eq!(model1, "20-200mm F3.5-6.3 DG C025");
+
+        // Case 2: EXIF model contains Sigma
+        let res2 = find_best_lens_match(&db, "SONY", "Sigma 20-200mm F3.5-6.3 DG C025");
+        assert!(res2.is_some());
+        let (maker2, model2) = res2.unwrap();
+        assert_eq!(maker2, "Sigma");
+        assert_eq!(model2, "20-200mm F3.5-6.3 DG C025");
     }
 }

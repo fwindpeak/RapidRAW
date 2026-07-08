@@ -111,7 +111,7 @@
       "threshold": "阈值"
     },
     "effects": {
-      "amount": "数量",
+      "amount": "数值",
       "creative": "创意",
       "feather": "羽化",
       "glow": "发光",
@@ -648,7 +648,7 @@
       "title": "元数据"
     },
     "presets": {
-      "amount": "数量",
+      "amount": "数值",
       "dialog": {
         "allPresetFiles": "所有预设文件",
         "exportAllTitle": "导出所有预设",
@@ -1242,7 +1242,7 @@
       "title": "导入设置"
     },
     "lensCorrection": {
-      "amount": "数量",
+      "amount": "数值",
       "apply": "应用",
       "autoDetectLens": "自动检测镜头",
       "autoDetectStatus": "自动检测状态",
@@ -1339,7 +1339,7 @@
       "placeholder": "输入新的组名称..."
     },
     "transform": {
-      "amount": "数量",
+      "amount": "数值",
       "apply": "应用",
       "aspect": "纵横比",
       "cancel": "取消",
@@ -1683,7 +1683,7 @@
       "addShortcutsPlaceholder": "添加快捷方式（逗号分隔）...",
       "aiTagging": "AI 标签",
       "aiTaggingDesc": "使用 AI（CLIP）模型启用自动图像标签。这将下载额外的模型，并在浏览文件夹时影响性能。标签用于搜索文件夹。",
-      "amount": "数量",
+      "amount": "数值",
       "automaticAiTagging": "自动 AI 标签",
       "clearAiTagsButton": "清除",
       "clearAiTagsDesc": "这将从所有活动根文件夹中的 .rrdata 文件中移除所有 AI 生成的标签。用户添加的标签将被保留。",

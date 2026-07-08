@@ -41,3 +41,4 @@ src-tauri/libs/
 
 # bench/replay.js result dumps
 bench/out/
+*.pyc
