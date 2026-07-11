@@ -115,6 +115,11 @@ pub fn load_base_image_from_bytes(
             }
             Ok(Err(e)) => {
                 let classified = classify_raw_develop_error(path_for_ext_check, e);
+
+                if classified.to_string().contains("Load cancelled") {
+                    return Err(classified);
+                }
+
                 log::warn!(
                     "Error developing RAW file '{}': {}",
                     path_for_ext_check,
@@ -127,7 +132,27 @@ pub fn load_base_image_from_bytes(
                         preview.width(),
                         preview.height()
                     );
-                    return Ok(apply_srgb_to_linear(preview));
+
+                    let mut linear_preview = apply_srgb_to_linear(preview);
+                    match &mut linear_preview {
+                        image::DynamicImage::ImageRgb32F(img) => {
+                            for p in img.pixels_mut() {
+                                p[0] *= 0.4;
+                                p[1] *= 0.4;
+                                p[2] *= 0.4;
+                            }
+                        }
+                        image::DynamicImage::ImageRgba32F(img) => {
+                            for p in img.pixels_mut() {
+                                p[0] *= 0.4;
+                                p[1] *= 0.4;
+                                p[2] *= 0.4;
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    return Ok(linear_preview);
                 }
                 Err(classified)
             }
@@ -200,7 +225,7 @@ fn largest_tiff_jpeg_preview(buf: &[u8]) -> Option<DynamicImage> {
         } as u64)
     };
 
-    let mut best: Option<(u64, u64)> = None;
+    let mut candidates: Vec<(u64, u64)> = Vec::new();
     let mut queue: Vec<u64> = vec![rd32(4)?];
     let mut seen = HashMap::new();
 
@@ -211,17 +236,17 @@ fn largest_tiff_jpeg_preview(buf: &[u8]) -> Option<DynamicImage> {
         let Some(n) = rd16(ifd as usize) else {
             continue;
         };
-        let mut subfile: u64 = u64::MAX;
+
         let mut compression: u64 = 0;
         let mut strip: Option<(u64, u64)> = None;
         let mut old_jpeg: Option<(u64, u64)> = None;
+
         for i in 0..n {
             let e = ifd as usize + 2 + (i as usize) * 12;
             let (Some(tag), Some(count), Some(val)) = (rd16(e), rd32(e + 4), rd32(e + 8)) else {
                 continue;
             };
             match tag {
-                254 => subfile = val,
                 259 => compression = val,
                 273 if count == 1 => strip = Some((val, strip.map_or(0, |s| s.1))),
                 279 if count == 1 => strip = strip.map(|s| (s.0, val)).or(Some((0, val))),
@@ -241,17 +266,14 @@ fn largest_tiff_jpeg_preview(buf: &[u8]) -> Option<DynamicImage> {
                 _ => {}
             }
         }
+
         if matches!(compression, 6 | 7)
-            && subfile == 1
-            && let Some((off, len)) = strip
-            && len > best.map_or(0, |b| b.1)
+            && let Some(s) = strip
         {
-            best = Some((off, len));
+            candidates.push(s);
         }
-        if let Some((off, len)) = old_jpeg
-            && len > best.map_or(0, |b| b.1)
-        {
-            best = Some((off, len));
+        if let Some(oj) = old_jpeg {
+            candidates.push(oj);
         }
         if let Some(next) = rd32(ifd as usize + 2 + (n as usize) * 12)
             && next != 0
@@ -260,9 +282,17 @@ fn largest_tiff_jpeg_preview(buf: &[u8]) -> Option<DynamicImage> {
         }
     }
 
-    let (off, len) = best?;
-    let bytes = buf.get(off as usize..(off + len) as usize)?;
-    image::load_from_memory_with_format(bytes, image::ImageFormat::Jpeg).ok()
+    candidates.sort_by_key(|&(_, len)| std::cmp::Reverse(len));
+
+    for (off, len) in candidates {
+        if let Some(bytes) = buf.get(off as usize..(off + len) as usize)
+            && let Ok(img) = image::load_from_memory_with_format(bytes, image::ImageFormat::Jpeg)
+        {
+            return Some(img);
+        }
+    }
+
+    None
 }
 
 fn embedded_preview_fallback(bytes: &[u8], path: &str) -> Option<DynamicImage> {
