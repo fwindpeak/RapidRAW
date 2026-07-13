@@ -141,7 +141,7 @@ pub fn load_base_image_from_bytes(
                     path_for_ext_check,
                     classified
                 );
-                if let Some(preview) = embedded_preview_fallback(bytes, path_for_ext_check) {
+                if let Some(preview) = safe_embedded_preview_fallback(bytes, path_for_ext_check) {
                     log::warn!(
                         "Using embedded preview fallback for '{}' ({}x{})",
                         path_for_ext_check,
@@ -149,31 +149,22 @@ pub fn load_base_image_from_bytes(
                         preview.height()
                     );
 
-                    let mut linear_preview = apply_srgb_to_linear(preview);
-                    match &mut linear_preview {
-                        image::DynamicImage::ImageRgb32F(img) => {
-                            for p in img.pixels_mut() {
-                                p[0] *= 0.4;
-                                p[1] *= 0.4;
-                                p[2] *= 0.4;
-                            }
-                        }
-                        image::DynamicImage::ImageRgba32F(img) => {
-                            for p in img.pixels_mut() {
-                                p[0] *= 0.4;
-                                p[1] *= 0.4;
-                                p[2] *= 0.4;
-                            }
-                        }
-                        _ => {}
-                    }
-
-                    return Ok(linear_preview);
+                    return Ok(linearize_embedded_preview(preview));
                 }
                 Err(classified)
             }
             Err(_) => {
                 log::error!("Panic while processing RAW file: {}", path_for_ext_check);
+                if let Some(preview) = safe_embedded_preview_fallback(bytes, path_for_ext_check) {
+                    log::warn!(
+                        "Using embedded preview fallback for '{}' after RAW decoder panic ({}x{})",
+                        path_for_ext_check,
+                        preview.width(),
+                        preview.height()
+                    );
+
+                    return Ok(linearize_embedded_preview(preview));
+                }
                 Err(anyhow!(
                     "Failed to process RAW file: {}",
                     path_for_ext_check
@@ -334,6 +325,29 @@ fn embedded_preview_fallback(bytes: &[u8], path: &str) -> Option<DynamicImage> {
         Some(o) if o > 1 => apply_orientation(img, Orientation::from_u16(o as u16)),
         _ => img,
     })
+}
+
+fn safe_embedded_preview_fallback(bytes: &[u8], path: &str) -> Option<DynamicImage> {
+    match panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        embedded_preview_fallback(bytes, path)
+    })) {
+        Ok(preview) => preview,
+        Err(_) => {
+            log::warn!("Embedded RAW preview extraction panicked for '{}'", path);
+            None
+        }
+    }
+}
+
+fn linearize_embedded_preview(preview: DynamicImage) -> DynamicImage {
+    let preview = DynamicImage::ImageRgb32F(preview.to_rgb32f());
+    let mut linear_preview = apply_srgb_to_linear(preview).into_rgb32f();
+    for pixel in linear_preview.pixels_mut() {
+        pixel[0] *= 0.4;
+        pixel[1] *= 0.4;
+        pixel[2] *= 0.4;
+    }
+    DynamicImage::ImageRgb32F(linear_preview)
 }
 
 pub fn load_image_with_orientation(
