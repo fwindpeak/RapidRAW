@@ -295,9 +295,6 @@ fn clean_undefined_field(
     fallback_display: impl FnOnce() -> String,
 ) -> Option<String> {
     if tag_name == "UserComment" {
-        // First 8 bytes are a character-code header (e.g. b"ASCII\0\0\0",
-        // b"UNICODE\0"). Strip it, then check whether what remains is
-        // meaningful text or just padding/zeros.
         let body = if bytes.len() > 8 { &bytes[8..] } else { &[][..] };
         let text = String::from_utf8_lossy(body)
             .trim_matches(char::from(0))
