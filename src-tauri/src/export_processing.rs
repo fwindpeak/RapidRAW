@@ -763,7 +763,7 @@ pub async fn export_images(
     );
 
     let task = tokio::spawn(async move {
-        let _export_guard = export_handle_guard {
+        let _export_guard = ExportHandleGuide {
             app_handle: app_handle.clone(),
         };
         let output_folder_path = std::path::Path::new(&output_folder_or_file);
