@@ -17,7 +17,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
-import SettingsPanel from './SettingsPanel';
 import { ThemeProps, THEMES, DEFAULT_THEME_ID } from '../../utils/themes';
 import {
   AppSettings,
@@ -33,6 +32,7 @@ import { ImportState, Status } from '../ui/ExportImportProperties';
 import Text from '../ui/Text';
 import { TextColors, TextVariants, TextWeights } from '../../types/typography';
 import { useLibraryStore } from '../../store/useLibraryStore';
+import { useUIStore } from '../../store/useUIStore';
 
 import LibraryGrid from './library/LibraryGrid';
 import { SearchInput, ViewOptionsDropdown } from './library/LibraryHeader';
@@ -89,7 +89,7 @@ export interface ColumnWidths {
 
 export default function MainLibrary(props: MainLibraryProps) {
   const { t } = useTranslation();
-  const [showSettings, setShowSettings] = useState(false);
+  const setUI = useUIStore((state) => state.setUI);
   const [appVersion, setAppVersion] = useState('');
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState('');
@@ -263,16 +263,7 @@ export default function MainLibrary(props: MainLibraryProps) {
             </div>
 
             <div className="w-full h-full flex flex-col p-8 lg:p-16 overflow-y-auto custom-scrollbar relative z-10">
-              {showSettings ? (
-                <SettingsPanel
-                  appSettings={props.appSettings}
-                  onBack={() => setShowSettings(false)}
-                  onLibraryRefresh={props.onLibraryRefresh}
-                  onSettingsChange={props.onSettingsChange}
-                  rootPaths={props.rootPaths}
-                />
-              ) : (
-                <>
+              <>
                   <div className="my-auto text-left relative z-10">
                     <Text variant={TextVariants.displayLarge}>{t('library.splash.brand')}</Text>
                     <Text
@@ -320,7 +311,7 @@ export default function MainLibrary(props: MainLibraryProps) {
                         </Button>
                         <Button
                           className="px-3 bg-surface text-text-primary shadow-md h-11"
-                          onClick={() => setShowSettings(true)}
+                          onClick={() => setUI({ isSettingsOpen: true })}
                           size="lg"
                           data-tooltip={t('settings.general.title')}
                           variant="ghost"
@@ -401,7 +392,6 @@ export default function MainLibrary(props: MainLibraryProps) {
                     )}
                   </Text>
                 </>
-              )}
             </div>
           </div>
         </div>

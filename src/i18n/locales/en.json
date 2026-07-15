@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Cycle zoom (Fit, 2x Fit, 100%)",
         "delete_selected": "Delete selected file(s)",
         "open_image": "Open selected image",
+        "open_settings": "Open settings",
         "paste_adjustments": "Paste copied adjustments",
         "paste_files": "Paste file(s) to current folder",
         "preview_next": "Next image",

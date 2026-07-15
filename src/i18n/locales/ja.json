@@ -1451,6 +1451,7 @@
         "cycle_zoom": "ズームの切り替え (全体表示、2倍拡大、100%)",
         "delete_selected": "選択したファイルを削除",
         "open_image": "選択した画像を開く",
+        "open_settings": "設定を開く",
         "paste_adjustments": "コピーした補正設定を貼り付け",
         "paste_files": "現在のフォルダにファイルを貼り付け",
         "preview_next": "次の画像",

@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Faire défiler le zoom (Ajuster, 2x Ajuster, 100%)",
         "delete_selected": "Supprimer le(s) fichier(s) sélectionné(s)",
         "open_image": "Ouvrir l'image sélectionnée",
+        "open_settings": "Ouvrir les paramètres",
         "paste_adjustments": "Coller les ajustements copiés",
         "paste_files": "Coller le(s) fichier(s) dans le dossier actuel",
         "preview_next": "Image suivante",

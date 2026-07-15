@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Zoom durchwechseln (Einpassen, 2x Einpassen, 100%)",
         "delete_selected": "Ausgewählte Datei(en) löschen",
         "open_image": "Ausgewähltes Bild öffnen",
+        "open_settings": "Einstellungen öffnen",
         "paste_adjustments": "Kopierte Anpassungen einfügen",
         "paste_files": "Datei(en) in aktuellen Ordner einfügen",
         "preview_next": "Nächstes Bild",

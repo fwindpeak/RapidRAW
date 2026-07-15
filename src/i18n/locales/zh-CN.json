@@ -1452,6 +1452,7 @@
         "cycle_zoom": "循环缩放（适应、2倍适应、100%）",
         "delete_selected": "删除选中的文件",
         "open_image": "打开选中的图像",
+        "open_settings": "打开设置",
         "paste_adjustments": "粘贴复制的调整",
         "paste_files": "将文件粘贴到当前文件夹",
         "preview_next": "下一张",

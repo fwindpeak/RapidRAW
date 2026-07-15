@@ -1452,6 +1452,7 @@
         "cycle_zoom": "迴圈縮放（適應、2倍適應、100%）",
         "delete_selected": "刪除選中的檔案",
         "open_image": "開啟選中的影像",
+        "open_settings": "開啟設定",
         "paste_adjustments": "貼上複製的調整",
         "paste_files": "將檔案貼上到當前資料夾",
         "preview_next": "下一張",

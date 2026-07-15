@@ -1452,6 +1452,7 @@
         "cycle_zoom": "확대/축소 순환 (맞춤, 2배 맞춤, 100%)",
         "delete_selected": "선택한 파일 삭제",
         "open_image": "선택한 이미지 열기",
+        "open_settings": "설정 열기",
         "paste_adjustments": "복사한 조정값 붙여넣기",
         "paste_files": "현재 폴더에 파일 붙여넣기",
         "preview_next": "다음 이미지",

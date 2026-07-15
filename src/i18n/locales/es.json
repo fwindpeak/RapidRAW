@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Alternar zoom (Ajustar, 2x Ajustar, 100%)",
         "delete_selected": "Eliminar archivo(s) seleccionado(s)",
         "open_image": "Abrir imagen seleccionada",
+        "open_settings": "Abrir la configuración",
         "paste_adjustments": "Pegar ajustes copiados",
         "paste_files": "Pegar archivo(s) a la carpeta actual",
         "preview_next": "Siguiente imagen",

@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Ruota zoom (Adatta, Adatta 2x, 100%)",
         "delete_selected": "Elimina file selezionati",
         "open_image": "Apri immagine selezionata",
+        "open_settings": "Apri le impostazioni",
         "paste_adjustments": "Incolla regolazioni copiate",
         "paste_files": "Incolla file nella cartella corrente",
         "preview_next": "Immagine successiva",

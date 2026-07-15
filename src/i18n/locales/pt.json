@@ -1452,6 +1452,7 @@
         "cycle_zoom": "Alternar zoom (Caber, 2x Caber, 100%)",
         "delete_selected": "Excluir arquivo(s) selecionado(s)",
         "open_image": "Abrir imagem selecionada",
+        "open_settings": "Otwórz configurações",
         "paste_adjustments": "Colar ajustes copiados",
         "paste_files": "Colar arquivo(s) na pasta atual",
         "preview_next": "Próxima imagem",
