@@ -1,17 +1,21 @@
 import clsx from 'clsx';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-interface ButtonProps {
-  autoFocus?: boolean;
-  children: any;
-  className?: string;
-  disabled?: boolean;
-  onClick: any;
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'size'> {
+  children: ReactNode;
   size?: string;
-  title?: string;
   variant?: string;
 }
 
-const Button = ({ children, onClick, disabled, className = '', ...props }: ButtonProps) => {
+const Button = ({
+  children,
+  onClick,
+  disabled,
+  className = '',
+  size: _size,
+  variant: _variant,
+  ...props
+}: ButtonProps) => {
   const baseClasses = `
     flex items-center justify-center gap-2 
     font-semibold py-2 px-4 rounded-md 

@@ -12,6 +12,7 @@ type SliderChangeEvent =
 
 interface SliderProps {
   defaultValue?: number;
+  disabled?: boolean;
   label: React.ReactNode;
   max: number;
   min: number;
@@ -34,6 +35,7 @@ const hasFineAdjustmentModifier = (event: MouseEvent | TouchEvent | React.MouseE
 
 const Slider = ({
   defaultValue = 0,
+  disabled = false,
   label,
   max,
   min,
@@ -113,7 +115,7 @@ const Slider = ({
     if (!sliderElement) return;
 
     const handleWheel = (event: WheelEvent) => {
-      if (!event.shiftKey) {
+      if (disabled || !event.shiftKey) {
         return;
       }
 
@@ -149,7 +151,7 @@ const Slider = ({
     return () => {
       sliderElement.removeEventListener('wheel', handleWheel);
     };
-  }, [value, min, max, step, onChange, decimalPlaces]);
+  }, [disabled, value, min, max, step, onChange, decimalPlaces]);
 
   // Handle Dragging
   useEffect(() => {
@@ -279,6 +281,8 @@ const Slider = ({
   }, [isEditing]);
 
   const handleReset = () => {
+    if (disabled) return;
+
     const syntheticEvent = {
       target: {
         value: defaultValue,
@@ -288,7 +292,7 @@ const Slider = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (suppressTouchChangeRef.current) {
+    if (disabled || suppressTouchChangeRef.current) {
       return;
     }
 
@@ -299,6 +303,8 @@ const Slider = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
     if (Date.now() - lastUpTime.current < DOUBLE_CLICK_THRESHOLD_MS) {
       e.preventDefault();
       return;
@@ -319,6 +325,8 @@ const Slider = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
     if (e.touches.length === 0) return;
 
     const touch = e.touches[0];
@@ -345,6 +353,8 @@ const Slider = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
     if (isDragging || !pendingTouchRef.current || e.touches.length === 0) return;
 
     const touch = e.touches[0];
@@ -390,10 +400,14 @@ const Slider = ({
   };
 
   const handleValueClick = () => {
+    if (disabled) return;
+
     setIsEditing(true);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
     const textVal = e.target.value;
     if (!/^[0-9.,\-]*$/.test(textVal)) {
       return;
@@ -412,6 +426,8 @@ const Slider = ({
   };
 
   const handleInputCommit = () => {
+    if (disabled) return;
+
     let newValue = parseFloat(inputValue.replace(',', '.'));
     if (isNaN(newValue)) {
       newValue = value;
@@ -428,6 +444,8 @@ const Slider = ({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
     if (e.key === 'Enter') {
       handleInputCommit();
       e.currentTarget.blur();
@@ -466,14 +484,14 @@ const Slider = ({
   const numericValue = isNaN(Number(value)) ? 0 : Number(value);
 
   return (
-    <div className="mb-2 group" ref={containerRef}>
+    <div className={`mb-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`} ref={containerRef}>
       <div className="flex justify-between items-center mb-1">
         <div
-          className={`grid ${typeof label === 'string' ? 'cursor-pointer' : ''}`}
-          onClick={typeof label === 'string' ? handleReset : undefined}
-          onDoubleClick={typeof label === 'string' ? handleReset : undefined}
-          onMouseEnter={typeof label === 'string' ? () => setIsLabelHovered(true) : undefined}
-          onMouseLeave={typeof label === 'string' ? () => setIsLabelHovered(false) : undefined}
+          className={`grid ${typeof label === 'string' && !disabled ? 'cursor-pointer' : ''}`}
+          onClick={typeof label === 'string' && !disabled ? handleReset : undefined}
+          onDoubleClick={typeof label === 'string' && !disabled ? handleReset : undefined}
+          onMouseEnter={typeof label === 'string' && !disabled ? () => setIsLabelHovered(true) : undefined}
+          onMouseLeave={typeof label === 'string' && !disabled ? () => setIsLabelHovered(false) : undefined}
         >
           <span
             aria-hidden={isLabelHovered && typeof label === 'string'}
@@ -498,6 +516,7 @@ const Slider = ({
           {isEditing ? (
             <input
               className="w-full text-sm text-right bg-card-active border border-gray-500 rounded-sm px-1 py-0 outline-none focus:ring-1 focus:ring-blue-500 text-text-primary"
+              disabled={disabled}
               max={max}
               min={min}
               onBlur={handleInputCommit}
@@ -510,9 +529,9 @@ const Slider = ({
             />
           ) : (
             <span
-              className="text-sm text-text-primary w-full text-right select-none cursor-text"
-              onClick={handleValueClick}
-              onDoubleClick={handleReset}
+              className={`text-sm text-text-primary w-full text-right select-none ${disabled ? '' : 'cursor-text'}`}
+              onClick={disabled ? undefined : handleValueClick}
+              onDoubleClick={disabled ? undefined : handleReset}
               data-tooltip={t('ui.slider.clickToEdit')}
             >
               {decimalPlaces > 0 && numericValue === 0 ? '0' : numericValue.toFixed(decimalPlaces)}
@@ -539,7 +558,8 @@ const Slider = ({
           ref={rangeInputRef}
           className={`absolute top-1/2 left-0 w-full h-1.5 appearance-none bg-transparent cursor-pointer m-0 p-0 slider-input z-10 ${
             isDragging ? 'slider-thumb-active' : ''
-          }`}
+          } ${disabled ? 'cursor-not-allowed' : ''}`}
+          disabled={disabled}
           style={{ margin: 0, touchAction: isDragging ? 'none' : 'pan-y' }}
           max={String(max)}
           min={String(min)}

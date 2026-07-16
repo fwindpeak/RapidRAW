@@ -30,7 +30,7 @@ export interface ConfirmModalState {
 
 export interface CollageModalState {
   isOpen: boolean;
-  sourceImages: ImageFile[];
+  sourceImages: Array<Pick<ImageFile, 'path'>>;
 }
 
 export interface PanoramaModalState {
