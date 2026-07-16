@@ -40,6 +40,55 @@ export function calculateCenteredCrop(
   };
 }
 
+function isCropWithinBounds(crop: Crop, imageW: number, imageH: number, rotation: number): boolean {
+  const cx = imageW / 2;
+  const cy = imageH / 2;
+  const rad = (-rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const pts = [
+    { x: crop.x, y: crop.y },
+    { x: crop.x + crop.width, y: crop.y },
+    { x: crop.x, y: crop.y + crop.height },
+    { x: crop.x + crop.width, y: crop.y + crop.height },
+  ];
+  for (let i = 0; i < 4; i++) {
+    const nx = cos * (pts[i].x - cx) - sin * (pts[i].y - cy) + cx;
+    const ny = sin * (pts[i].x - cx) + cos * (pts[i].y - cy) + cy;
+    if (nx < -1 || nx > imageW + 1 || ny < -1 || ny > imageH + 1) return false;
+  }
+  return true;
+}
+
+export function calculateAreaPreservingCrop(
+  imageWidth: number,
+  imageHeight: number,
+  orientationSteps: number,
+  aspectRatio: number | null,
+  rotation: number,
+  currentCrop: Crop | null | undefined,
+): Crop | null {
+  if (!aspectRatio || aspectRatio <= 0 || !currentCrop || !currentCrop.width || !currentCrop.height) return null;
+
+  const { width: W, height: H } = getOrientedDimensions(imageWidth, imageHeight, orientationSteps);
+
+  const area = currentCrop.width * currentCrop.height;
+  const newH = Math.sqrt(area / aspectRatio);
+  const newW = aspectRatio * newH;
+  const centerX = currentCrop.x + currentCrop.width / 2;
+  const centerY = currentCrop.y + currentCrop.height / 2;
+
+  const candidate: Crop = {
+    unit: 'px',
+    x: Math.round(centerX - newW / 2),
+    y: Math.round(centerY - newH / 2),
+    width: Math.round(newW),
+    height: Math.round(newH),
+  };
+
+  return isCropWithinBounds(candidate, W, H, rotation) ? candidate : null;
+}
+
 export function rotateCropCenter(
   crop: Crop,
   orientedWidth: number,
