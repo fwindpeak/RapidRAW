@@ -365,9 +365,9 @@
         "aiEdit_one": "AI編集 {{count}}",
         "aiEdit_other": "AI編集 {{count}}",
         "clone": "クローン {{count}}",
-        "clone_other": "",
+        "clone_other": "クローン {{count}}",
         "heal": "修復 {{count}}",
-        "heal_other": "",
+        "heal_other": "修復 {{count}}",
         "invertedName": "{{name}} 反転",
         "quickErase": "クイック消去 {{count}}",
         "quickErase_one": "クイック消去 {{count}}",
@@ -793,7 +793,7 @@
       "noImagesSelected": "画像が選択されていません。",
       "success": "書き出しが成功しました！"
     },
-    "title": "",
+    "title": "エクスポート",
     "watermark": {
       "addWatermark": "ウォーターマークを追加",
       "anchors": {
