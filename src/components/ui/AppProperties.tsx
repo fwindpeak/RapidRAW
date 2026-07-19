@@ -172,6 +172,8 @@ export interface AppSettings {
   enableLivePreviews?: boolean;
   livePreviewQuality?: string;
   enableAiTagging?: boolean;
+  aiTagCount?: number;
+  customAiTags?: string[];
   filterCriteria?: FilterCriteria;
   lastFolderState?: any;
   pinnedFolders?: any;
@@ -209,7 +211,10 @@ export interface AppSettings {
   folderIcons?: Record<string, string>;
   exifOverlay?: ExifOverlay;
   language?: string;
+  fontFamily?: string;
   folderTreeSort?: FolderTreeSort;
+  rootFolders?: string[];
+  taggingShortcuts?: string[];
 }
 
 export interface BrushSettings {

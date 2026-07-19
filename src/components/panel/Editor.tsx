@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'react-toastify';
 import debounce from 'lodash.debounce';
 
-import { ImageDimensions, useImageRenderSize } from '../../hooks/useImageRenderSize';
+import { ImageDimensions, RenderSize, useImageRenderSize } from '../../hooks/useImageRenderSize';
 import { Adjustments, AiPatch, MaskContainer } from '../../utils/adjustments';
 import { calculateCenteredCrop, rotateCropCenter } from '../../utils/cropUtils';
 import EditorToolbar from './editor/EditorToolbar';
@@ -209,7 +209,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
   }, [isFullScreen, selectedImage, targetZoom, setUI]);
 
   const handleDisplaySizeChange = useCallback(
-    (size: any) => {
+    (size: RenderSize) => {
       setEditor({ displaySize: { width: size.width, height: size.height } });
       if (size.scale) {
         const baseWidth = size.width / size.scale;
@@ -222,7 +222,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
           containerWidth: size.containerWidth || 0,
           containerHeight: size.containerHeight || 0,
         };
-        setEditor({ baseRenderSize: newSize as any });
+        setEditor({ baseRenderSize: newSize });
       }
     },
     [setEditor],
@@ -1334,7 +1334,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
     return JSON.stringify({
       id: activeMaskDef.id,
       invert: activeMaskDef.invert,
-      opacity: activeMaskDef.opacity,
+      ...('opacity' in activeMaskDef ? { opacity: activeMaskDef.opacity } : {}),
       subMasks,
       geometry,
       renderSize: { w: imageRenderSize.width, h: imageRenderSize.height },
