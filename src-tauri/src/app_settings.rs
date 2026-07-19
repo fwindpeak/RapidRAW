@@ -434,6 +434,8 @@ pub struct AppSettings {
     pub language: Option<String>,
     #[serde(default)]
     pub folder_tree_sort: Option<FolderTreeSort>,
+    #[serde(default)]
+    pub library_display_mode: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -520,6 +522,7 @@ impl Default for AppSettings {
             exif_overlay: Some("off".to_string()),
             language: Some("en".to_string()),
             folder_tree_sort: Some(FolderTreeSort::default()),
+            library_display_mode: Some("grid".to_string()),
         }
     }
 }
