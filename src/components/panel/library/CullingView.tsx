@@ -16,6 +16,7 @@ import {
   Check,
   Plus,
   SlidersHorizontal,
+  Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
@@ -27,6 +28,7 @@ import { useProcessStore } from '../../../store/useProcessStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useLibraryActions } from '../../../hooks/useLibraryActions';
 import { COLOR_LABELS, Color } from '../../../utils/adjustments';
+import { IconAperture, IconFocalLength, IconIso, IconShutter } from '../editor/ExifIcons';
 
 interface SyncViewport {
   isActive: boolean;
@@ -45,7 +47,12 @@ function CullingPreview({
   setSyncViewport,
   onContextMenu,
   onImageDoubleClick,
+  hoveredPath,
   setHoveredCullingPath,
+  showRateBar,
+  setShowRateBar,
+  showInfoBar,
+  setShowInfoBar,
 }: {
   image: ImageFile;
   rating: number;
@@ -56,7 +63,12 @@ function CullingPreview({
   setSyncViewport: React.Dispatch<React.SetStateAction<SyncViewport>>;
   onContextMenu: (e: React.MouseEvent, path: string, forceSingleSelection?: boolean) => void;
   onImageDoubleClick: (path: string) => void;
+  hoveredPath: string | null;
   setHoveredCullingPath: (path: string | null) => void;
+  showRateBar: boolean;
+  setShowRateBar: React.Dispatch<React.SetStateAction<boolean>>;
+  showInfoBar: boolean;
+  setShowInfoBar: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const thumbUrl = useProcessStore((s) => s.thumbnails[image.path]);
   const initialPreview = useProcessStore((s) => s.previews[image.path]);
@@ -76,7 +88,6 @@ function CullingPreview({
   const hasDragged = useRef(false);
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
-  const [showMetadataBar, setShowMetadataBar] = useState(false);
   const [tagInputValue, setTagInputValue] = useState('');
   const [fitScale, setFitScale] = useState<number | null>(null);
   const { handleRate, handleSetColorLabel, handleTagsChanged } = useLibraryActions();
@@ -103,6 +114,47 @@ function CullingPreview({
       }))
       .sort((a, b) => a.tag.localeCompare(b.tag));
   }, [image.tags]);
+
+  const { exifData, hasExif } = useMemo(() => {
+    const exif = image.exif || {};
+
+    let fNum = exif.FNumber;
+    if (fNum) {
+      const fStr = String(fNum);
+      fNum = fStr.toLowerCase().startsWith('f') ? fStr : `f/${fStr}`;
+    }
+
+    let captureDate = null;
+    let captureTime = null;
+
+    if (exif.DateTimeOriginal) {
+      const dateTimeParts = exif.DateTimeOriginal.split(' ');
+      captureDate = dateTimeParts[0]?.replace(/:/g, '-') || null;
+      if (dateTimeParts[1]) {
+        const timeParts = dateTimeParts[1].split(':');
+        captureTime = `${timeParts[0]}:${timeParts[1]}`;
+      }
+    }
+
+    const data = {
+      iso: exif.PhotographicSensitivity || exif.ISO,
+      fNumber: fNum,
+      shutter: exif.ExposureTime,
+      focal: exif.FocalLengthIn35mmFilm,
+      captureDate: captureDate,
+      captureTime: captureTime,
+    };
+
+    const hasData = !!(data.iso || data.fNumber || data.shutter || data.focal || data.captureDate);
+
+    return {
+      exifData: data,
+      hasExif: hasData,
+    };
+  }, [image.exif]);
+
+  const imageWidth = (image as any).width || image.exif?.ExifImageWidth || image.exif?.PixelXDimension;
+  const imageHeight = (image as any).height || image.exif?.ExifImageHeight || image.exif?.PixelYDimension;
 
   const handleAddTag = async (tagToAdd: string) => {
     const newTagValue = tagToAdd.trim().toLowerCase();
@@ -300,13 +352,14 @@ function CullingPreview({
     e.stopPropagation();
     if (hasDragged.current) return;
 
-    if (showMetadataBar) {
-      setShowMetadataBar(false);
+    if (showRateBar || showInfoBar) {
+      if (showRateBar) setShowRateBar(false);
+      if (showInfoBar) setShowInfoBar(false);
       return;
     }
 
     if (Math.abs(zoom - 1) > 0.01 || pan.x !== 0 || pan.y !== 0) {
-      updateViewport(1, { x: 0, y: 0 }); // Reset to fit
+      updateViewport(1, { x: 0, y: 0 });
     } else {
       const targetZoom = fitScale ? 1 / fitScale : 2;
       if (containerRef.current) {
@@ -314,7 +367,6 @@ function CullingPreview({
         const mouseX = e.clientX - rect.left - rect.width / 2;
         const mouseY = e.clientY - rect.top - rect.height / 2;
 
-        // Compute pan adjustment to bring the clicked point to the center
         const newPanX = -mouseX * (targetZoom - 1);
         const newPanY = -mouseY * (targetZoom - 1);
 
@@ -334,7 +386,6 @@ function CullingPreview({
 
     const zoomFactor = Math.exp(-e.deltaY * 0.002);
 
-    // Calculate CSS scaling limits so absolute image pixels scale between 1% and 1000%
     const minCSSScale = fitScale ? 0.01 / fitScale : 0.1;
     const maxCSSScale = fitScale ? 10 / fitScale : 10;
 
@@ -376,9 +427,9 @@ function CullingPreview({
 
     const currentAbsoluteZoom = zoom * fitScale;
     if (Math.abs(currentAbsoluteZoom - 1) < 0.05) {
-      updateViewport(1, { x: 0, y: 0 }); // Go back to fit container
+      updateViewport(1, { x: 0, y: 0 });
     } else {
-      updateViewport(1 / fitScale, { x: 0, y: 0 }); // True 1:1 image pixels mapping
+      updateViewport(1 / fitScale, { x: 0, y: 0 });
     }
   };
 
@@ -404,6 +455,13 @@ function CullingPreview({
     transformOrigin: 'center center',
     backfaceVisibility: 'hidden' as const,
   };
+
+  const isHovered = hoveredPath === image.path;
+  const isActiveFallback = isActive && !hoveredPath;
+  const displayMenu = isHovered || isActiveFallback;
+
+  const isRateMenuVisible = showRateBar && displayMenu;
+  const isInfoMenuVisible = showInfoBar && displayMenu;
 
   return (
     <div
@@ -458,15 +516,14 @@ function CullingPreview({
         </div>
       </div>
 
-      {/* Floating Metadata Overlay */}
       <AnimatePresence>
-        {showMetadataBar && (
+        {isInfoMenuVisible && (
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-[4.5rem] left-1/2 -translate-x-1/2 flex flex-col gap-4 bg-bg-primary/95 backdrop-blur-xl p-4 rounded-xl border border-white/10 shadow-2xl z-30 pointer-events-auto w-64 max-h-[70%] overflow-y-auto custom-scrollbar"
+            className="absolute bottom-[4.5rem] left-1/2 -translate-x-1/2 flex flex-col gap-4 bg-bg-primary/70 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-xl z-30 pointer-events-auto w-64 max-h-[70%] overflow-y-auto custom-scrollbar"
             onMouseDown={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
@@ -476,7 +533,103 @@ function CullingPreview({
                 Metadata
               </Text>
               <button
-                onClick={() => setShowMetadataBar(false)}
+                onClick={() => setShowInfoBar(false)}
+                className="text-white/50 hover:text-white transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {imageWidth && imageHeight && (
+                <div>
+                  <Text
+                    variant={TextVariants.small}
+                    className="text-white/50 text-[10px] uppercase tracking-wider mb-1.5 block"
+                  >
+                    Dimensions
+                  </Text>
+                  <Text variant={TextVariants.small} className="text-white">
+                    {imageWidth} × {imageHeight}
+                  </Text>
+                </div>
+              )}
+
+              {hasExif && (
+                <div>
+                  <Text
+                    variant={TextVariants.small}
+                    className="text-white/50 text-[10px] uppercase tracking-wider mb-1.5 block"
+                  >
+                    Camera Settings
+                  </Text>
+                  <div className="grid grid-cols-2 gap-3">
+                    {exifData.shutter && (
+                      <div className="flex items-center gap-1.5 text-white/90" title="Shutter Speed">
+                        <span className="opacity-70">
+                          <IconShutter />
+                        </span>
+                        <Text variant={TextVariants.small}>{exifData.shutter}</Text>
+                      </div>
+                    )}
+                    {exifData.fNumber && (
+                      <div className="flex items-center gap-1.5 text-white/90" title="Aperture">
+                        <span className="opacity-70">
+                          <IconAperture />
+                        </span>
+                        <Text variant={TextVariants.small}>{exifData.fNumber}</Text>
+                      </div>
+                    )}
+                    {exifData.iso && (
+                      <div className="flex items-center gap-1.5 text-white/90" title="ISO">
+                        <span className="opacity-70">
+                          <IconIso />
+                        </span>
+                        <Text variant={TextVariants.small}>{exifData.iso}</Text>
+                      </div>
+                    )}
+                    {exifData.focal && (
+                      <div className="flex items-center gap-1.5 text-white/90" title="Focal Length">
+                        <span className="opacity-70">
+                          <IconFocalLength />
+                        </span>
+                        <Text variant={TextVariants.small}>
+                          {String(exifData.focal).endsWith('mm') ? exifData.focal : `${exifData.focal}mm`}
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!hasExif && !imageWidth && !imageHeight && (
+                <Text variant={TextVariants.small} className="text-white/50 italic">
+                  No metadata available
+                </Text>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isRateMenuVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-[4.5rem] left-1/2 -translate-x-1/2 flex flex-col gap-4 bg-bg-primary/70 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-xl z-30 pointer-events-auto w-64 max-h-[70%] overflow-y-auto custom-scrollbar"
+            onMouseDown={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <Text variant={TextVariants.small} weight={TextWeights.semibold} className="text-white">
+                Rate & Label
+              </Text>
+              <button
+                onClick={() => setShowRateBar(false)}
                 className="text-white/50 hover:text-white transition-colors"
               >
                 <X size={14} />
@@ -582,7 +735,7 @@ function CullingPreview({
                   </Text>
                 )}
               </div>
-              <div className="flex items-center bg-black/40 border border-white/10 rounded-md px-2 py-1.5 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center bg-bg-primary/40 border border-white/10 rounded-md px-2 py-1.5 focus-within:border-accent/50 transition-colors">
                 <input
                   type="text"
                   value={tagInputValue}
@@ -606,8 +759,8 @@ function CullingPreview({
 
       <div
         className={clsx(
-          'absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-bg-primary/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl z-20 pointer-events-auto transition-opacity duration-200',
-          showMetadataBar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+          'absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-bg-primary/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl z-20 pointer-events-auto transition-opacity duration-200 max-w-[calc(100%-1.5rem)]',
+          isRateMenuVisible || isInfoMenuVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
         )}
         onMouseDown={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
@@ -625,7 +778,11 @@ function CullingPreview({
           )}
         </AnimatePresence>
 
-        <Text variant={TextVariants.small} className="text-white truncate max-w-37.5">
+        <Text
+          variant={TextVariants.small}
+          className="text-white truncate shrink min-w-0 max-w-20 sm:max-w-28 md:max-w-37.5"
+          data-tooltip={baseName}
+        >
           {baseName}
         </Text>
 
@@ -681,11 +838,31 @@ function CullingPreview({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setShowMetadataBar(!showMetadataBar);
+            setShowInfoBar((prev) => {
+              if (!prev) setShowRateBar(false);
+              return !prev;
+            });
           }}
           className={clsx(
             'p-1.5 rounded-full transition-colors shrink-0',
-            showMetadataBar ? 'bg-accent text-button-text' : 'text-white/60 hover:bg-white/10 hover:text-white',
+            showInfoBar ? 'bg-accent text-button-text' : 'text-white/60 hover:bg-white/10 hover:text-white',
+          )}
+          data-tooltip="Metadata"
+        >
+          <Info size={14} />
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowRateBar((prev) => {
+              if (!prev) setShowInfoBar(false);
+              return !prev;
+            });
+          }}
+          className={clsx(
+            'p-1.5 rounded-full transition-colors shrink-0',
+            showRateBar ? 'bg-accent text-button-text' : 'text-white/60 hover:bg-white/10 hover:text-white',
           )}
           data-tooltip="Rate & Label"
         >
@@ -714,7 +891,7 @@ function CullingPreview({
 
         <button
           onClick={handleToggle1to1}
-          className="text-xs font-mono text-white/90 w-12 text-center select-none shrink-0 hover:bg-white/10 hover:text-white rounded-md py-1 transition-colors cursor-pointer"
+          className="text-xs font-mono text-white/90 w-8 text-center select-none shrink-0 hover:bg-white/10 hover:text-white rounded-md py-1 transition-colors cursor-pointer"
           data-tooltip="Toggle 1:1 / Fit"
         >
           {fitScale ? Math.round(zoom * fitScale * 100) : Math.round(zoom * 100)}%
@@ -811,6 +988,8 @@ export default function CullingView(props: any) {
     onContextMenu,
     onImageDoubleClick,
     onRequestThumbnails,
+    onClearSelection,
+    onEmptyAreaContextMenu,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -829,6 +1008,9 @@ export default function CullingView(props: any) {
     pan: { x: 0, y: 0 },
     isDragging: false,
   });
+
+  const [showRateBar, setShowRateBar] = useState(false);
+  const [showInfoBar, setShowInfoBar] = useState(false);
 
   const queueThumbnailRequest = useCallback(
     (path: string) => {
@@ -933,6 +1115,20 @@ export default function CullingView(props: any) {
     .filter(Boolean);
   const displayCount = displayImages.length;
 
+  const handleSidebarEmptyClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-bench-id="thumbnail"]') && !target.closest('button')) {
+      onClearSelection?.();
+    }
+  };
+
+  const handleSidebarEmptyContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-bench-id="thumbnail"]') && !target.closest('button')) {
+      onEmptyAreaContextMenu?.(e);
+    }
+  };
+
   return (
     <div className="flex w-full h-full min-h-0 bg-transparent">
       <div className="flex-1 flex overflow-hidden relative bg-transparent">
@@ -967,7 +1163,12 @@ export default function CullingView(props: any) {
                 isFullWidth={displayCount === 3 && index === 2}
                 syncViewport={syncViewport}
                 setSyncViewport={setSyncViewport}
+                hoveredPath={hoveredCullingPath}
                 setHoveredCullingPath={setHoveredCullingPath}
+                showRateBar={showRateBar}
+                setShowRateBar={setShowRateBar}
+                showInfoBar={showInfoBar}
+                setShowInfoBar={setShowInfoBar}
               />
             ))}
           </div>
@@ -978,6 +1179,8 @@ export default function CullingView(props: any) {
         ref={containerRef}
         style={{ width: sidebarWidth }}
         className="relative shrink-0 border-l border-surface/50 bg-bg-secondary/50 flex flex-col"
+        onClick={handleSidebarEmptyClick}
+        onContextMenu={handleSidebarEmptyContextMenu}
       >
         <div
           onMouseDown={startResizing}
