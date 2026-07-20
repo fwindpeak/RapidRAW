@@ -419,11 +419,6 @@ function CullingPreview({
     updateViewport(newZoom, { x: pan.x * ratio, y: pan.y * ratio });
   };
 
-  const handleResetZoom = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    updateViewport(1, { x: 0, y: 0 });
-  };
-
   const handleToggle1to1 = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!fitScale) return;
@@ -909,13 +904,6 @@ function CullingPreview({
         >
           <ZoomIn size={16} />
         </button>
-
-        <button
-          onClick={handleResetZoom}
-          className="p-1.5 text-white/60 hover:bg-white/10 hover:text-white rounded-full transition-colors shrink-0"
-        >
-          <Maximize size={14} />
-        </button>
       </div>
 
       <div
@@ -1109,7 +1097,7 @@ export default function CullingView(props: any) {
     ],
   );
 
-  const displayPaths = multiSelectedPaths.slice(-4);
+  const displayPaths = multiSelectedPaths.slice(-6);
   const displayImages = displayPaths
     .map((p: string) => imageList.find((img: ImageFile) => img.path === p))
     .filter(Boolean);
@@ -1147,6 +1135,8 @@ export default function CullingView(props: any) {
               displayCount === 2 && 'grid-cols-2 grid-rows-1',
               displayCount === 3 && 'grid-cols-2 grid-rows-2',
               displayCount === 4 && 'grid-cols-2 grid-rows-2',
+              displayCount === 5 && 'grid-cols-3 grid-rows-2',
+              displayCount === 6 && 'grid-cols-3 grid-rows-2',
             )}
           >
             {displayImages.map((img: ImageFile, index: number) => (
@@ -1158,7 +1148,7 @@ export default function CullingView(props: any) {
                 onImageDoubleClick={onImageDoubleClick}
                 isActive={activePath === img.path}
                 isSelected={true}
-                isFullWidth={displayCount === 3 && index === 2}
+                isFullWidth={(displayCount === 3 && index === 2) || (displayCount === 5 && index === 4)}
                 syncViewport={syncViewport}
                 setSyncViewport={setSyncViewport}
                 hoveredPath={hoveredCullingPath}
