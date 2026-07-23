@@ -134,13 +134,12 @@ jobs:
       - id: tauri-build
         name: Build with tauri-action
         if: ${{ inputs.mobile == '' }}
-        # FIXME set this back to a release major version, ex. v0 . This is a commit from the `dev` branch which includes PR
-        # https://github.com/tauri-apps/tauri-action/pull/1099 , adding the assetNamePattern feature.
-        uses: tauri-apps/tauri-action@cf3eb9b18add8548a40584695215c80ab7274f31
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NO_STRIP: ${{ startsWith(inputs.platform, 'ubuntu') }}
         with:
+          tauriScript: npm run tauri
           args: --verbose ${{ inputs.build-args }} ${{ inputs.target != '' && '--target' || ''  }} ${{ inputs.target }}
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
           releaseId: ${{ inputs.release-id }}
