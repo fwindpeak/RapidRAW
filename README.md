@@ -25,6 +25,12 @@ RapidRAW is a modern, high-performance alternative to Adobe Lightroom®. It deli
 
 I started developing this project as a personal challenge when I was 18. My goal was to create a high-performance tool for my own photography workflow while deepening my understanding of React, WGSL and Rust.
 
+> [!NOTE]
+> **Fork 说明 / Fork Notes**
+>
+> 我觉得 RapidRAW 非常好用且高效。由于 Lensfun 官方数据库暂不支持适马 20-200mm (Sigma 20-200mm F3.5-6.3 DG C025) 镜头的光学矫正，我通过转换 Adobe LCP (Lens Profile) 文件生成了对应的镜头矫正配置文件。
+> 考虑到此类转换生成的配置格式不符合 Lensfun 官方数据库的 Pull Request 规范和上游主仓库的要求，因此我维护了这个 Fork 仓库，用于应用此镜头矫正并在自己仓库中打包发布 Release。
+
 <table width="100%">
   <tr>
     <td width="50%" valign="top" align="center">
